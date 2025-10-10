@@ -1,0 +1,199 @@
+# Vent4D-Mech Default Configuration
+# Python-based Lung Tissue Dynamics Modeling Framework
+
+# Image Registration Configuration
+registration:
+  method: "voxelmorph"  # Options: "simpleitk", "voxelmorph", "hybrid"
+  gpu: true
+
+  simpleitk:
+    method: "bspline"
+    grid_spacing: [50.0, 50.0, 50.0]  # mm
+    optimizer: "lbfgsb"
+    metric: "mean_squares"
+    multi_resolution: true
+    shrink_factors: [8, 4, 2, 1]
+    smoothing_sigmas: [4, 2, 1, 0]
+    max_iterations: 100
+    convergence_tolerance: 1e-6
+
+  voxelmorph:
+    model_type: "vxm"
+    model_path: null
+    input_shape: [160, 192, 224]
+    batch_size: 1
+    learning_rate: 1e-4
+    loss_weights:
+      similarity: 1.0
+      regularization: 0.01
+
+# Deformation Analysis Configuration
+deformation:
+  strain:
+    theory: "green_lagrange"  # Options: "infinitesimal", "green_lagrange"
+    num_diff_method: "central"
+    boundary_treatment: "zero_padding"
+    smoothing_sigma: 0.0
+
+  computation:
+    gpu_memory_fraction: 0.8
+    batch_processing: true
+    batch_size: 64
+    precision: "float32"
+    parallel_processing: true
+
+  analysis:
+    compute_invariants: true
+    compute_principal_strains: true
+    compute_strain_magnitude: true
+    compute_volumetric_strain: true
+    output_format: "tensor"
+
+# Mechanical Modeling Configuration
+mechanical:
+  constitutive_model: "mooney_rivlin"  # Options: "neo_hookean", "mooney_rivlin", "yeoh", "ogden", "linear_elastic"
+
+  material_parameters:
+    neo_hookean:
+      C10: 0.135  # kPa
+    mooney_rivlin:
+      C10: 0.135  # kPa
+      C01: 0.035  # kPa
+    yeoh:
+      C10: 0.135  # kPa
+      C20: -0.05  # kPa
+      C30: 0.01   # kPa
+    ogden:
+      mu: [1.0, 0.1]    # kPa
+      alpha: [2.0, -2.0]
+    linear_elastic:
+      youngs_modulus: 5.0  # kPa
+      poisson_ratio: 0.45
+
+  modeling:
+    incompressible: true
+    poisson_ratio: 0.45
+    nearly_incompressible: true
+    bulk_modulus: 1000.0  # kPa
+
+# Inverse Problem Configuration
+inverse:
+  solver:
+    method: "least_squares"  # Options: "least_squares", "trust_region", "gradient_descent"
+    max_iterations: 1000
+    tolerance: 1e-6
+    step_size: 1e-3
+    line_search: true
+
+  regularization:
+    method: "tikhonov"  # Options: "tikhonov", "total_variation", "l1"
+    alpha: 0.01
+    operator: "laplacian"  # Options: "identity", "gradient", "laplacian"
+    spatial_weighting: true
+    edge_preserving: false
+
+  material:
+    constitutive_model: "linear_elastic"
+    poisson_ratio: 0.45
+    initial_modulus: 5.0  # kPa
+    bounds: [0.1, 100.0]  # kPa
+    spatial_smoothing: true
+
+# Microstructure Database Configuration
+microstructure:
+  hoa:
+    base_url: "https://human-organ-atlas.esrf.fr"
+    cache_dir: "hoa_cache"
+    resolution_levels: [20e-6, 10e-6, 5e-6, 2e-6, 1e-6]  # meters
+    tissue_types: ["healthy", "fibrotic", "emphysematous"]
+    download_data: false
+
+  rve:
+    rve_size: [1.0, 1.0, 1.0]  # mm
+    rve_count: 100
+    mesh_resolution: 50e-6  # 50 micrometers
+    material_model: "neo_hookean"
+    boundary_conditions: "periodic"
+
+  surrogate_models:
+    model_type: "gradient_boosting"  # Options: "gradient_boosting", "neural_network", "random_forest"
+    input_features: ["hu_value", "texture_entropy", "gradient_magnitude"]
+    output_properties: ["youngs_modulus", "poisson_ratio", "bulk_modulus"]
+    training_data_ratio: 0.8
+    cross_validation_folds: 5
+
+# Finite Element Method Configuration
+fem:
+  mesh:
+    mesh_type: "tetrahedral"  # Options: "tetrahedral", "hexahedral"
+    mesh_resolution: 2.0  # mm
+    smoothing_iterations: 10
+    quality_threshold: 0.1
+    adaptive_refinement: false
+
+  boundary_conditions:
+    displacement_based: true
+    interpolation_method: "trilinear"
+    zero_displacement_regions: "pleural_surface"
+    loading_regions: "diaphragm"
+
+  solver:
+    backend: "sfepy"  # Options: "sfepy", "easyfea"
+    solver_type: "nonlinear"
+    max_iterations: 100
+    tolerance: 1e-6
+    material_model: "hyperelastic"
+
+  post_processing:
+    compute_strain: true
+    compute_stress: true
+    compute_jacobian: true
+    export_format: "vtk"
+    visualization: true
+
+# Ventilation Analysis Configuration
+ventilation:
+  ventilation_method: "jacobian"  # Options: "jacobian", "strain_based", "hybrid"
+
+  jacobian:
+    smoothing_sigma: 1.0
+    normalize_method: "percentile"  # Options: "percentile", "z_score", "min_max"
+    percentile_range: [5, 95]
+
+  strain_based:
+    strain_threshold: 0.1
+    weighting_function: "exponential"
+
+  regional_analysis:
+    lung_regions: ["upper_left", "upper_right", "middle_left", "middle_right", "lower_left", "lower_right"]
+    lobe_segmentation: true
+    heterogeneity_metrics: true
+
+  clinical_metrics:
+    compute_svi: true  # Specific ventilation index
+    compute_vt_ratio: true  # Tidal volume ratio
+    baseline_normalization: true
+
+# Performance Configuration
+performance:
+  gpu_acceleration: true
+  gpu_memory_fraction: 0.8
+  parallel_processing: true
+  num_workers: 4
+  memory_limit: "8GB"
+  batch_size: 32
+
+# Logging Configuration
+logging:
+  level: "INFO"  # Options: "DEBUG", "INFO", "WARNING", "ERROR"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: null  # Set to file path to enable file logging
+  console: true
+
+# Output Configuration
+output:
+  save_intermediate: true
+  save_components: true
+  save_statistics: true
+  visualization_data: true
+  export_format: "vtk"  # Options: "vtk", "nii", "npy"

@@ -1,0 +1,69 @@
+# Vent4D-Mech Requirements
+# Python-based Lung Tissue Dynamics Modeling Framework
+
+# Core Scientific Computing
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-learn>=1.3.0
+
+# Medical Image Processing
+SimpleITK>=2.3.0
+nibabel>=5.1.0
+pydicom>=2.4.0
+
+# Deep Learning for Image Registration
+torch>=2.0.0
+torchvision>=0.15.0
+voxelmorph>=0.2.0
+
+# GPU Acceleration (optional but recommended)
+cupy-cuda11x>=12.0.0  # Adjust based on CUDA version
+numba>=0.58.0
+
+# Finite Element Analysis
+sfepy>=2025.2.0
+# Alternative: easyfea (if available)
+# easyfea>=0.1.0
+
+# Image Processing and Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.15.0
+pyvista>=0.42.0
+imageio>=2.31.0
+scikit-image>=0.21.0
+
+# Data Handling and I/O
+pandas>=2.0.0
+h5py>=3.9.0
+meshio>=5.3.0
+zarr>=2.16.0
+
+# Parallel Processing
+joblib>=1.3.0
+multiprocessing-logging>=0.3.4
+
+# Configuration and Utilities
+pyyaml>=6.0
+click>=8.1.0
+tqdm>=4.65.0
+rich>=13.6.0
+
+# Testing and Development
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.7.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Documentation
+sphinx>=7.1.0
+sphinx-rtd-theme>=1.3.0
+
+# Human Organ Atlas Integration (optional)
+requests>=2.31.0
+boto3>=1.28.0  # For data download from S3-compatible storage
+
+# Interpolation and Advanced Numerical Methods
+interpolation>=0.4.0
+pynrrd>=1.0.0
