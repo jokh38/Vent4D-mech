@@ -17,7 +17,7 @@ try:
 except ImportError:
     SIMPLEITK_AVAILABLE = False
 
-from ..registration_utils import RegistrationUtils
+from .registration_utils import RegistrationUtils
 
 
 class SimpleITKRegistration:

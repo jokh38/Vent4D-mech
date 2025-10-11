@@ -11,9 +11,9 @@ import numpy as np
 import logging
 from pathlib import Path
 
-from .mesh_generation import MeshGeneration
-from .boundary_conditions import BoundaryConditions
-from .fem_solver import FEMSolver
+from .mesh_generation import MeshGenerator
+from .boundary_conditions import BoundaryConditionManager
+from .finite_element_solver import FEMSolver
 from .post_processing import PostProcessing
 
 
@@ -27,8 +27,8 @@ class FEMWorkflow:
 
     Attributes:
         config (dict): Configuration parameters
-        mesh_generator (MeshGeneration): Mesh generation tools
-        boundary_conditions (BoundaryConditions): Boundary condition management
+        mesh_generator (MeshGenerator): Mesh generation tools
+        boundary_conditions (BoundaryConditionManager): Boundary condition management
         fem_solver (FEMSolver): FEM solver interface
         post_processor (PostProcessing): Results processing
         logger (logging.Logger): Logger instance
@@ -45,8 +45,8 @@ class FEMWorkflow:
         self.config = config or self._get_default_config()
 
         # Initialize components
-        self.mesh_generator = MeshGeneration(self.config['mesh'])
-        self.boundary_conditions = BoundaryConditions(self.config['boundary_conditions'])
+        self.mesh_generator = MeshGenerator(self.config['mesh'])
+        self.boundary_conditions = BoundaryConditionManager(self.config['boundary_conditions'])
         self.fem_solver = FEMSolver(self.config['solver'])
         self.post_processor = PostProcessing(self.config['post_processing'])
 

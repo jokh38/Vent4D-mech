@@ -151,7 +151,7 @@ class ImageRegistration:
             return self._initialize_hybrid_registration()
 
         else:
-            raise ValueError(f"Unsupported registration method: {method}")
+            raise ValueError(f"Unsupported registration method: {self.method}")
 
     def _initialize_hybrid_registration(self) -> Dict[str, Any]:
         """

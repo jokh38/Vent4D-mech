@@ -27,7 +27,7 @@ try:
 except ImportError:
     VOXMORPH_AVAILABLE = False
 
-from ..registration_utils import RegistrationUtils
+from .registration_utils import RegistrationUtils
 
 
 class VoxelMorphRegistration:

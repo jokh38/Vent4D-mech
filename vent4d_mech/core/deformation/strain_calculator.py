@@ -6,7 +6,7 @@ finite deformation theories, with emphasis on Green-Lagrange strain tensors
 for large deformation analysis in lung tissue.
 """
 
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 import numpy as np
 import logging
 

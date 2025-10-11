@@ -7,6 +7,7 @@ This module contains unit tests for mechanical modeling functionality.
 import pytest
 import sys
 import os
+import numpy as np
 
 # Add project to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -120,11 +121,11 @@ class TestConstitutiveModels:
         """Test shear modulus calculation for different models."""
         # Neo-Hookean
         neo_model = constitutive_models.NeoHookeanModel(C10=0.1)
-        assert neo_model.get_shear_modulus() == 0.2  # 2 * C10
+        assert neo_model.get_shear_modulus() == pytest.approx(0.2)  # 2 * C10
 
         # Mooney-Rivlin
         mr_model = constitutive_models.MooneyRivlinModel(C10=0.1, C01=0.05)
-        assert mr_model.get_shear_modulus() == 0.3  # 2 * (C10 + C01)
+        assert mr_model.get_shear_modulus() == pytest.approx(0.3)  # 2 * (C10 + C01)
 
         # Linear Elastic
         le_model = constitutive_models.LinearElasticModel(youngs_modulus=6.0, poisson_ratio=0.4)
@@ -157,7 +158,7 @@ class TestStressComputation:
             model = constitutive_models.NeoHookeanModel(C10=0.135)
 
             # Create a mock strain tensor
-            mock_strain = [[0.1, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+            mock_strain = np.array([[0.1, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
 
             # This should not crash (even with mocked numpy)
             try:
@@ -181,7 +182,7 @@ class TestStressComputation:
             model = constitutive_models.NeoHookeanModel(C10=0.135)
 
             # Create a mock strain tensor
-            mock_strain = [[0.1, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+            mock_strain = np.array([[0.1, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
 
             # This should not crash (even with mocked numpy)
             try:

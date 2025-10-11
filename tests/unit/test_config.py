@@ -100,7 +100,8 @@ class TestDefaultConfig:
             'registration': {},
             'mechanical': {},
             'performance': {},
-            'logging': {}
+            'logging': {},
+            'validation': {}
         }
         assert default_config.DefaultConfig.validate_config_structure(valid_config) is True
 
