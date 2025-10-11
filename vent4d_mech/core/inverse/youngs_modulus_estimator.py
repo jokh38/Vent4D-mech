@@ -205,7 +205,7 @@ class YoungsModulusEstimator:
         if observed_strain.shape != deformation_gradient.shape:
             raise ValueError("Observed strain and deformation gradient must have same shape")
 
-        if np.any(np.isnan(observed_strain)) or np.any(np.isnan(deformation_gradient):
+        if np.any(np.isnan(observed_strain)) or np.any(np.isnan(deformation_gradient)):
             raise ValueError("Input data contains NaN values")
 
     def _prepare_initial_guess(self, shape: Tuple[int, int, int]) -> np.ndarray:
