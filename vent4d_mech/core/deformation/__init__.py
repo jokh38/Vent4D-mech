@@ -15,6 +15,9 @@ Key features:
 """
 
 from .deformation_analyzer import DeformationAnalyzer
+from .strain_tensor import *
+from .deformation_field import *
+from .mesh_deformation import *
 from .strain_calculator import StrainCalculator
 from .deformation_utils import DeformationUtils, StrainInvariants
 

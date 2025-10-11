@@ -15,6 +15,10 @@ Key features:
 """
 
 from .fem_workflow import FEMWorkflow
+from .material_models import *
+from .finite_element_solver import *
+from .mesh_generation import *
+from .boundary_conditions import *
 from .mesh_generation import MeshGeneration
 from .boundary_conditions import BoundaryConditions
 from .fem_solver import FEMSolver

@@ -16,6 +16,8 @@ Key features:
 """
 
 from .mechanical_modeler import MechanicalModeler
+from .hyperelastic_models import *
+from .tissue_mechanics import *
 from .constitutive_models import (
     ConstitutiveModel,
     NeoHookeanModel,

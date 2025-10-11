@@ -14,6 +14,8 @@ Key features:
 """
 
 from .image_registration import ImageRegistration
+from .deformable_registration import *
+from .image_preprocessing import *
 from .simpleitk_registration import SimpleITKRegistration
 from .voxelmorph_registration import VoxelMorphRegistration
 from .registration_utils import RegistrationUtils, RegistrationMetrics

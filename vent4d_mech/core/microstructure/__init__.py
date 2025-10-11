@@ -14,6 +14,8 @@ Key features:
 """
 
 from .microstructure_db import MicrostructureDB
+from .atlas_integration import *
+from .homogenization import *
 from .hoa_integration import HOAIntegration
 from .rve_analysis import RVEAnalysis
 from .surrogate_models import SurrogateModels

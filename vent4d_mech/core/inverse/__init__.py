@@ -14,6 +14,8 @@ Key features:
 """
 
 from .youngs_modulus_estimator import YoungsModulusEstimator
+from .parameter_estimation import *
+from .regularization import *
 from .inverse_solver import InverseSolver
 from .regularization import RegularizationMethods
 from .optimization_utils import OptimizationUtils

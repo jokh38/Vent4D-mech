@@ -14,6 +14,7 @@ Key features:
 """
 
 from .ventilation_calculator import VentilationCalculator
+from .ventilation_calculation import *
 from .regional_analysis import RegionalVentilation
 from .clinical_metrics import ClinicalMetrics
 from .validation_tools import ValidationTools
