@@ -1,185 +1,148 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides development workflow guidelines for using subagents to ensure code quality and architectural integrity.
 
-## Development Commands
+## Development Workflow with Subagents
 
-### Installation and Setup
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+This project implements a structured development workflow using specialized subagents to ensure code quality and architectural integrity.
 
-# Install dependencies
-pip install -r requirements.txt
+### Before File Editing: Prediction and Prevention
 
-# Install the package in development mode
-pip install -e .
+**1. Change Scope Prediction**
+- Use `architecture-guardian` subagent to predict all files that will be affected by the changes
+- Identify dependencies and potential ripple effects across the codebase
+- Present a comprehensive list of files that may need modification
+- Analyze import relationships and module interdependencies
 
-# Install GPU support (optional but recommended)
-pip install cupy-cuda11x  # For CUDA 11.x
-# or
-pip install cupy-cuda12x  # For CUDA 12.x
-```
+**2. Procedure Guidance**
+- Provide a task-specific checklist for the current operation (e.g., renaming, refactoring, adding features)
+- Include step-by-step instructions that follow best practices
+- Ensure all necessary preconditions and prerequisites are identified
+- Define success criteria and validation steps
 
-### Testing
-```bash
-# Run all tests
-pytest
+**3. Architecture Rule Warning**
+- Use `architecture-guardian` subagent to identify potential architecture rule violations
+- Warn about patterns that could break modularity, circular dependencies, or other architectural invariants
+- Suggest alternative approaches that maintain architectural integrity
+- Identify potential breaking changes and migration requirements
 
-# Run specific module tests
-pytest tests/test_registration.py
-pytest tests/test_deformation.py
+### After File Editing: Verification and Synchronization
 
-# Run with coverage
-pytest --cov=vent4d_mech
+**1. Automated Inspection**
+- Static analysis is automatically configured via pre-commit hooks
+- Use `static-code-analyzer` subagent to run comprehensive analysis
+- Check for architecture rule violations, code quality issues, and potential bugs
+- Review hook results and address any identified issues immediately
+- Verify compliance with coding standards and style guides
 
-# Run with verbose output
-pytest -v
-```
+**2. Code Testing**
+- Use `test-automation-validator` subagent to run the full test suite
+- Validate that all tests pass and coverage requirements are met
+- If tests fail, diagnose issues and implement fixes
+- Ensure new functionality is properly tested with appropriate test cases
+- Run integration tests to verify system-wide functionality
 
-### Code Quality
-```bash
-# Format code
-black vent4d_mech/ tests/
+**3. Documentation**
+- Update docstrings to follow the project's documentation style
+- Include clear parameter descriptions, return value specifications, and usage examples
+- Document any new APIs or modified interfaces
+- Ensure all public methods and classes have comprehensive documentation
+- Update README files and API documentation as needed
 
-# Lint code
-flake8 vent4d_mech/ tests/
+**4. Knowledge Synchronization**
+- Update Serena project documentation when code structure or APIs change
+- Sync memory stores with new architectural decisions or patterns
+- Update configuration files if new parameters or options are added
+- Ensure all documentation reflects the current state of the codebase
+- Inform team members of significant architectural changes
 
-# Type checking
-mypy vent4d_mech/
-```
+## Subagent Usage Guidelines
 
-### Documentation
-```bash
-# Build documentation
-cd docs/
-make html
+### Architecture Guardian
+- **When to use**: Before making structural changes, during refactoring, when adding new modules
+- **Purpose**: Maintain architectural integrity and prevent technical debt
+- **Key functions**:
+  - Dependency analysis and impact assessment
+  - Pattern validation and architectural rule enforcement
+  - Circular dependency detection
+  - Module boundary verification
+  - Interface compatibility checking
 
-# Clean build
-make clean
-```
+### Static Code Analyzer
+- **When to use**: After code changes, before commits, during code reviews
+- **Purpose**: Ensure code quality and catch potential issues early
+- **Key functions**:
+  - Syntax checking and parsing validation
+  - Linting and style guide compliance
+  - Type checking and inference
+  - Security scanning and vulnerability detection
+  - Performance anti-pattern identification
 
-## Architecture Overview
+### Test Automation Validator
+- **When to use**: After implementation, before merging, when validating fixes
+- **Purpose**: Ensure functional correctness and test coverage
+- **Key functions**:
+  - Test execution and result validation
+  - Coverage analysis and reporting
+  - Performance regression testing
+  - Integration test validation
+  - Requirements compliance verification
 
-Vent4D-Mech is a comprehensive Python framework for lung tissue dynamics modeling that transitions from empirical HU-based analysis to physics-based mechanical modeling. The architecture follows a modular pipeline design:
+## General Development Patterns
 
-### Core Pipeline Components
-The main pipeline follows this sequence:
-1. **Image Registration** (`vent4d_mech.core.registration`) - Hybrid approach combining SimpleITK (classical optimization) and VoxelMorph (deep learning)
-2. **Deformation Analysis** (`vent4d_mech.core.deformation`) - Large deformation theory using Green-Lagrange strain tensors
-3. **Mechanical Modeling** (`vent4d_mech.core.mechanical`) - Hyperelastic constitutive models (Neo-Hookean, Mooney-Rivlin, Yeoh)
-4. **Inverse Problem Solving** (`vent4d_mech.core.inverse`) - Regularized optimization for Young's modulus estimation
-5. **Microstructure Integration** (`vent4d_mech.core.microstructure`) - Human Organ Atlas integration for multi-scale modeling
-6. **FEM Workflow** (`vent4d_mech.core.fem`) - Python-native finite element simulation using SfePy
-7. **Ventilation Analysis** (`vent4d_mech.core.ventilation`) - Jacobian-based ventilation calculation
+### For Any Code Modification
+1. **Preparation Phase**
+   - Use `architecture-guardian` to analyze scope and impact
+   - Create a task-specific checklist
+   - Identify potential architectural violations
+   - Plan testing strategy
 
-### Key Design Patterns
-- **Modular Pipeline**: Each stage can be run independently or as part of the complete pipeline
-- **GPU Acceleration**: CuPy and PyTorch integration for high-performance computing with fallback to CPU
-- **Configuration-Driven**: YAML-based configuration system with sensible defaults in `config/default.yaml`
-- **Medical Image Format Support**: NIfTI and DICOM input/output through SimpleITK and nibabel
+2. **Implementation Phase**
+   - Make code changes following the identified patterns
+   - Ensure code follows established style guidelines
+   - Write comprehensive tests for new functionality
+   - Update documentation as you code
 
-### Critical Dependencies
-- **Medical Imaging**: SimpleITK, nibabel, pydicom for image processing
-- **Deep Learning**: PyTorch, VoxelMorph for registration
-- **GPU Computing**: CuPy for NumPy-compatible GPU operations
-- **Finite Element**: SfePy for mechanical simulation
-- **Scientific Computing**: NumPy, SciPy, scikit-learn
+3. **Validation Phase**
+   - Use `static-code-analyzer` for code quality checks
+   - Use `test-automation-validator` for comprehensive testing
+   - Review and address all identified issues
+   - Verify documentation completeness
 
-## Configuration System
+4. **Integration Phase**
+   - Update Serena project knowledge base
+   - Sync relevant documentation and configurations
+   - Communicate changes to team members
+   - Ensure all systems reflect current state
 
-The framework uses a hierarchical YAML configuration system:
+### Quality Gates
+- No code changes should be committed without passing static analysis
+- All tests must pass before merging changes
+- Documentation must be updated for any API changes
+- Architecture rules must never be violated
 
-### Main Configuration Structure
-- `registration`: Method selection (simpleitk, voxelmorph, hybrid) and parameters
-- `deformation`: Strain theory (green_lagrange vs infinitesimal) and computation settings
-- `mechanical`: Constitutive model selection and material parameters
-- `inverse`: Solver configuration for Young's modulus estimation
-- `microstructure`: Human Organ Atlas integration settings
-- `fem`: Mesh generation and solver configuration
-- `ventilation`: Analysis method and regional segmentation
-- `performance`: GPU acceleration and parallel processing settings
+### Continuous Improvement
+- Regularly review and update architectural guidelines
+- Enhance test coverage based on identified gaps
+- Refactor code when quality metrics indicate issues
+- Maintain up-to-date documentation and knowledge bases
 
-### GPU Configuration
-GPU acceleration is configurable per-module:
-```yaml
-performance:
-  gpu_acceleration: true
-  gpu_memory_fraction: 0.8
-  parallel_processing: true
-  num_workers: 4
-```
+## Hook Configuration
 
-## Data Flow and Processing
+Pre-commit hooks are automatically configured to run:
+- Code formatting
+- Linting and style checks
+- Static analysis validation
+- Basic syntax verification
 
-### Input Data Requirements
-- **4D-CT**: Paired inhale/exhale phases (NIfTI or DICOM)
-- **Segmentation**: Lung region masks (optional, auto-generated if not provided)
-- **Voxel Spacing**: Typically 1.5×1.5×3.0mm for clinical CT
+These hooks ensure code quality standards are maintained before any commit is made, providing immediate feedback on potential issues.
 
-### Output Data Types
-- **Deformation Fields**: 3D displacement vector fields
-- **Strain Tensors**: 6-component Green-Lagrange strain fields
-- **Material Properties**: Young's modulus distributions
-- **Ventilation Maps**: Regional ventilation indices
+## Error Handling and Recovery
 
-### Memory Management
-The framework implements batch processing for large volumes:
-```yaml
-deformation:
-  computation:
-    batch_processing: true
-    batch_size: 64
-    precision: "float32"
-```
+When subagents identify issues:
+1. **Architecture Violations**: Refactor to maintain architectural integrity
+2. **Static Analysis Issues**: Fix code quality problems immediately
+3. **Test Failures**: Debug and resolve all failing tests
+4. **Documentation Gaps**: Complete missing documentation before proceeding
 
-## Performance Considerations
-
-### GPU Acceleration
-- CuPy provides NumPy-compatible GPU arrays for numerical computations
-- PyTorch handles deep learning operations for registration
-- Zero-copy interoperability between CuPy and PyTorch when possible
-
-### Parallel Processing
-- Joblib for patient-level parallelization
-- Multiprocessing for CPU-bound tasks
-- Dask integration for out-of-core computation on large datasets
-
-## Testing Strategy
-
-### Test Categories
-- **Unit Tests**: Individual component functionality
-- **Integration Tests**: Pipeline workflow validation
-- **Performance Tests**: GPU acceleration and memory usage
-- **Validation Tests**: Comparison against clinical SPECT/CT data
-
-### Test Data
-- Synthetic data generation for reproducible testing
-- Phantom studies for algorithm validation
-- Clinical data comparison (when available)
-
-## Common Development Patterns
-
-### Adding New Constitutive Models
-1. Implement in `vent4d_mech/core/mechanical/mechanical_modeler.py`
-2. Add configuration parameters in `config/default.yaml`
-3. Update unit tests in `tests/test_mechanical.py`
-
-### Extending Registration Methods
-1. Create new registration class in `vent4d_mech/core/registration/`
-2. Inherit from base `ImageRegistration` class
-3. Register in `vent4d_mech/core/registration/__init__.py`
-
-### Integration with External Data Sources
-1. Extend `vent4d_mech/core/microstructure/microstructure_db.py`
-2. Add configuration options for API endpoints
-3. Implement data caching and validation
-
-## Clinical Validation Framework
-
-The framework includes tools for validation against clinical standards:
-- **SPECT/CT Comparison**: Quantitative validation against clinical gold standard
-- **Reproducibility Analysis**: Test-retest reliability metrics
-- **Phantom Studies**: Synthetic data validation pipeline
-- **Clinical Correlation**: Patient outcome analysis tools
+This systematic approach ensures consistent code quality, architectural integrity, and comprehensive documentation throughout the development lifecycle.
