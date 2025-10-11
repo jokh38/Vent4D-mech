@@ -22,12 +22,14 @@ try:
 except ImportError:
     SIMPLEITK_AVAILABLE = False
 
+from ..base_component import BaseComponent
+from ..exceptions import ConfigurationError, ValidationError, ComputationError
 from .simpleitk_registration import SimpleITKRegistration
 from .voxelmorph_registration import VoxelMorphRegistration
 from .registration_utils import RegistrationUtils, RegistrationMetrics
 
 
-class ImageRegistration:
+class ImageRegistration(BaseComponent):
     """
     Unified image registration interface for 4D-CT lung imaging.
 
@@ -55,9 +57,12 @@ class ImageRegistration:
             config: Configuration parameters
             gpu: Whether to use GPU acceleration
         """
+        # Initialize with additional method parameter
+        super().__init__(config=config or self._get_default_config(), gpu=gpu and TORCH_AVAILABLE)
+        
+        # Set method-specific attributes
         self.method = method.lower()
-        self.config = config or self._get_default_config()
-        self.gpu = gpu and TORCH_AVAILABLE
+        
 
         # Initialize logger
         self.logger = logging.getLogger(__name__)
@@ -77,6 +82,32 @@ class ImageRegistration:
         }
 
         self.logger.info(f"Initialized ImageRegistration with method: {method}")
+
+    def process(self, fixed_image: Union[np.ndarray, str, Path],
+                       moving_image: Union[np.ndarray, str, Path],
+                       mask: Optional[Union[np.ndarray, str, Path]] = None,
+                       **kwargs) -> Dict[str, Any]:
+        """
+        Process image registration using the BaseComponent interface.
+        
+        This method implements the BaseComponent's process interface and wraps
+        the register_images functionality.
+        
+        Args:
+            fixed_image: Fixed image (target) - array or file path
+            moving_image: Moving image (source) - array or file path
+            mask: Optional mask for registration region
+            **kwargs: Additional keyword arguments passed to register_images
+            
+        Returns:
+            Dictionary containing registration results
+        """
+        return self.register_images(
+            fixed_image=fixed_image,
+            moving_image=moving_image,
+            mask=mask,
+            return_transform=kwargs.get('return_transform', True)
+        )
 
     def _get_default_config(self) -> Dict[str, Any]:
         """

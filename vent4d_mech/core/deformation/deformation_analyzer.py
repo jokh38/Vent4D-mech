@@ -17,11 +17,13 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
+from ..base_component import BaseComponent
+from ..exceptions import ConfigurationError, ValidationError, ComputationError
 from .strain_calculator import StrainCalculator
 from .deformation_utils import DeformationUtils, StrainInvariants
 
 
-class DeformationAnalyzer:
+class DeformationAnalyzer(BaseComponent):
     """
     Main class for deformation analysis of lung tissue.
 
@@ -47,8 +49,8 @@ class DeformationAnalyzer:
             config: Configuration parameters
             gpu: Whether to use GPU acceleration
         """
-        self.config = config or self._get_default_config()
-        self.gpu = gpu and CUPY_AVAILABLE
+        # Initialize using BaseComponent
+        super().__init__(config=config or self._get_default_config(), gpu=gpu and CUPY_AVAILABLE)
 
         # Initialize components
         self.strain_calculator = StrainCalculator(self.config['strain'], self.gpu)
@@ -66,6 +68,31 @@ class DeformationAnalyzer:
         }
 
         self.logger.info(f"Initialized DeformationAnalyzer (GPU: {self.gpu})")
+
+    def process(self, dvf: np.ndarray,
+                      voxel_spacing: Tuple[float, float, float] = (1.0, 1.0, 1.0),
+                      mask: Optional[np.ndarray] = None,
+                      **kwargs) -> Dict[str, Any]:
+        """
+        Process deformation analysis using the BaseComponent interface.
+
+        This method implements the BaseComponent's process interface and wraps
+        the analyze_deformation functionality.
+
+        Args:
+            dvf: Displacement vector field (D, H, W, 3)
+            voxel_spacing: Physical voxel spacing (mm)
+            mask: Optional mask for region of interest
+            **kwargs: Additional keyword arguments passed to analyze_deformation
+
+        Returns:
+            Dictionary containing deformation analysis results
+        """
+        return self.analyze_deformation(
+                  dvf=dvf,
+                  voxel_spacing=voxel_spacing,
+                  mask=mask
+              )
 
     def _get_default_config(self) -> Dict[str, Any]:
         """

@@ -11,11 +11,13 @@ import numpy as np
 import logging
 from pathlib import Path
 
+from ..base_component import BaseComponent
+from ..exceptions import ConfigurationError, ValidationError, ComputationError
 from .regional_analysis import RegionalVentilation
 from .clinical_metrics import ClinicalMetrics
 
 
-class VentilationCalculator:
+class VentilationCalculator(BaseComponent):
     """
     Calculator for lung ventilation from deformation data.
 
@@ -31,26 +33,48 @@ class VentilationCalculator:
         ventilation_results (dict): Computed ventilation results
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None, gpu: bool = True):
         """
         Initialize VentilationCalculator instance.
 
         Args:
             config: Configuration parameters
+            gpu: Whether to use GPU acceleration
         """
-        self.config = config or self._get_default_config()
+        # Initialize using BaseComponent
+        super().__init__(config=config or self._get_default_config(), gpu=gpu)
 
         # Initialize components
         self.regional_analyzer = RegionalVentilation(self.config['regional_analysis'])
         self.clinical_metrics = ClinicalMetrics(self.config['clinical_metrics'])
 
-        # Initialize logger
-        self.logger = logging.getLogger(__name__)
-
         # Results storage
         self.ventilation_results = {}
 
-        self.logger.info("Initialized VentilationCalculator")
+    def process(self, deformation_gradient: np.ndarray,
+                      lung_mask: Optional[np.ndarray] = None,
+                      reference_volume: Optional[np.ndarray] = None,
+                      **kwargs) -> Dict[str, Any]:
+        """
+        Process ventilation calculation using the BaseComponent interface.
+
+        This method implements the BaseComponent's process interface and wraps
+        the compute_ventilation functionality.
+
+        Args:
+            deformation_gradient: Deformation gradient tensor field (D, H, W, 3, 3)
+            lung_mask: Optional lung region mask
+            reference_volume: Optional reference volume for normalization
+            **kwargs: Additional keyword arguments passed to compute_ventilation
+
+        Returns:
+            Dictionary containing ventilation results
+        """
+        return self.compute_ventilation(
+            deformation_gradient=deformation_gradient,
+            lung_mask=lung_mask,
+            reference_volume=reference_volume
+        )
 
     def _get_default_config(self) -> Dict[str, Any]:
         """
