@@ -4,11 +4,25 @@ Configuration Validation
 This module provides validation capabilities for configuration parameters
 in the Vent4D-Mech framework, ensuring that all settings are valid
 and consistent before they are used.
+
+Features both legacy validation and Pydantic-based validation for
+enhanced type safety and detailed error messages.
 """
 
 import logging
 from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
+
+# Try to import Pydantic - optional for backward compatibility
+try:
+    from pydantic import ValidationError as PydanticValidationError
+    from .schemas import Vent4DMechConfig, validate_config_dict
+    PYDANTIC_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AVAILABLE = False
+    Vent4DMechConfig = None
+    validate_config_dict = None
+    PydanticValidationError = None
 
 
 class ValidationError(Exception):
@@ -23,19 +37,41 @@ class ConfigValidation:
     This class provides comprehensive validation capabilities for all configuration
     parameters, ensuring type safety, value ranges, and logical consistency
     across the framework.
+
+    Supports both legacy validation and enhanced Pydantic-based validation.
     """
 
-    def __init__(self, strict_mode: bool = False):
+    def __init__(self, strict_mode: bool = False, use_pydantic: Optional[bool] = None):
         """
         Initialize ConfigValidation.
 
         Args:
             strict_mode: Whether to raise exceptions for all validation errors
+            use_pydantic: Whether to use Pydantic validation.
+                         If None, will use Pydantic if available.
         """
         self.logger = logging.getLogger(__name__)
         self.strict_mode = strict_mode
         self.validation_errors = []
         self.validation_warnings = []
+
+        # Determine whether to use Pydantic
+        if use_pydantic is None:
+            self.use_pydantic = PYDANTIC_AVAILABLE
+        else:
+            if use_pydantic and not PYDANTIC_AVAILABLE:
+                self.logger.warning(
+                    "Pydantic validation requested but Pydantic is not available. "
+                    "Falling back to legacy validation."
+                )
+                self.use_pydantic = False
+            else:
+                self.use_pydantic = use_pydantic
+
+        if self.use_pydantic:
+            self.logger.info("Using Pydantic-based configuration validation")
+        else:
+            self.logger.info("Using legacy configuration validation")
 
     def validate_config(self, config: Dict[str, Any]) -> bool:
         """
@@ -55,6 +91,60 @@ class ConfigValidation:
 
         self.logger.info("Starting configuration validation")
 
+        if self.use_pydantic and PYDANTIC_AVAILABLE:
+            return self._validate_with_pydantic(config)
+        else:
+            return self._validate_legacy(config)
+
+    def _validate_with_pydantic(self, config: Dict[str, Any]) -> bool:
+        """
+        Validate configuration using Pydantic schemas.
+
+        Args:
+            config: Configuration dictionary to validate
+
+        Returns:
+            True if configuration is valid
+
+        Raises:
+            ValidationError: If strict_mode is enabled and validation fails
+        """
+        try:
+            # Validate with Pydantic
+            validated_config = validate_config_dict(config)
+            self.logger.info("Pydantic validation passed")
+            return True
+
+        except PydanticValidationError as e:
+            # Convert Pydantic errors to legacy format for consistency
+            self._convert_pydantic_errors(e)
+
+            # Log validation results
+            self._log_validation_results()
+
+            # Determine success
+            is_valid = len(self.validation_errors) == 0
+
+            if self.strict_mode and not is_valid:
+                error_msg = f"Configuration validation failed: {self.validation_errors}"
+                self.logger.error(error_msg)
+                raise ValidationError(error_msg)
+
+            return is_valid
+
+    def _validate_legacy(self, config: Dict[str, Any]) -> bool:
+        """
+        Validate configuration using legacy validation logic.
+
+        Args:
+            config: Configuration dictionary to validate
+
+        Returns:
+            True if configuration is valid
+
+        Raises:
+            ValidationError: If strict_mode is enabled and validation fails
+        """
         # Validate structure
         self._validate_structure(config)
 
@@ -89,6 +179,93 @@ class ConfigValidation:
             raise ValidationError(error_msg)
 
         return is_valid
+
+    def _convert_pydantic_errors(self, pydantic_error: PydanticValidationError) -> None:
+        """
+        Convert Pydantic validation errors to legacy format.
+
+        Args:
+            pydantic_error: Pydantic ValidationError exception
+        """
+        for error in pydantic_error.errors():
+            field_path = " -> ".join(str(loc) for loc in error['loc'])
+            message = error['msg']
+            error_type = error['type']
+
+            # Format error message
+            if error_type == 'value_error.missing':
+                formatted_error = f"Missing required field: {field_path}"
+            elif error_type == 'value_error.extra':
+                formatted_error = f"Unknown field: {field_path}"
+            elif error_type == 'type_error':
+                formatted_error = f"Invalid type for {field_path}: {message}"
+            elif error_type == 'value_error.const':
+                formatted_error = f"Invalid value for {field_path}: {message}"
+            else:
+                formatted_error = f"Validation error for {field_path}: {message}"
+
+            # Add to appropriate list based on severity
+            if error_type in ['value_error.extra']:
+                self.validation_warnings.append(formatted_error)
+            else:
+                self.validation_errors.append(formatted_error)
+
+    def get_pydantic_schema(self) -> Optional[Dict[str, Any]]:
+        """
+        Get the Pydantic schema for configuration.
+
+        Returns:
+            Pydantic schema dictionary or None if Pydantic is not available
+        """
+        if not PYDANTIC_AVAILABLE:
+            return None
+
+        return Vent4DMechConfig.schema()
+
+    def validate_with_schema(self, config: Dict[str, Any], schema_section: Optional[str] = None) -> bool:
+        """
+        Validate configuration using Pydantic schema validation.
+
+        Args:
+            config: Configuration dictionary to validate
+            schema_section: Optional section name to validate specific section
+
+        Returns:
+            True if configuration is valid
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        if not PYDANTIC_AVAILABLE:
+            self.logger.warning("Pydantic not available, falling back to legacy validation")
+            return self.validate_config(config)
+
+        try:
+            if schema_section:
+                # Validate specific section
+                if schema_section not in config:
+                    self.validation_errors.append(f"Section '{schema_section}' not found in configuration")
+                    return False
+
+                section_config = {schema_section: config[schema_section]}
+                temp_config = Vent4DMechConfig(**section_config)
+            else:
+                # Validate entire configuration
+                temp_config = Vent4DMechConfig(**config)
+
+            self.logger.info(f"Schema validation passed for section: {schema_section or 'full config'}")
+            return True
+
+        except PydanticValidationError as e:
+            self._convert_pydantic_errors(e)
+            self._log_validation_results()
+
+            if self.strict_mode and self.validation_errors:
+                error_msg = f"Schema validation failed: {self.validation_errors}"
+                self.logger.error(error_msg)
+                raise ValidationError(error_msg)
+
+            return False
 
     def _validate_structure(self, config: Dict[str, Any]) -> None:
         """Validate configuration structure."""

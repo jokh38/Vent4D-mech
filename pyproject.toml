@@ -1,0 +1,414 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vent4d-mech"
+version = "0.1.0"
+description = "Python-based Lung Tissue Dynamics Modeling"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Vent4D-Mech Team", email = "vent4d-mech@example.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "scikit-learn>=1.3.0",
+    "pyyaml>=6.0",
+    "click>=8.1.0",
+    "tqdm>=4.65.0",
+    "rich>=13.6.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+medical = [
+    "SimpleITK>=2.3.0",
+    "nibabel>=5.1.0",
+    "pydicom>=2.4.0",
+]
+deep_learning = [
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "voxelmorph>=0.2.0",
+]
+gpu = [
+    "cupy-cuda11x>=12.0.0",
+    "numba>=0.58.0",
+]
+fem = [
+    "sfepy>=2025.2.0",
+]
+visualization = [
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "plotly>=5.15.0",
+    "pyvista>=0.42.0",
+]
+data = [
+    "pandas>=2.0.0",
+    "h5py>=3.9.0",
+    "meshio>=5.3.0",
+    "zarr>=2.16.0",
+]
+parallel = [
+    "joblib>=1.3.0",
+    "multiprocessing-logging>=0.3.4",
+]
+monitoring = [
+    "psutil>=5.9.0",
+]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-xdist>=3.3.0",
+    "pytest-benchmark>=4.0.0",
+    "black>=23.7.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.3.0",
+    "bandit>=1.7.0",
+    "safety>=2.3.0",
+    "interrogate>=1.5.0",
+]
+docs = [
+    "sphinx>=7.1.0",
+    "sphinx-rtd-theme>=1.3.0",
+    "sphinx-autodoc-typehints>=1.24.0",
+    "myst-parser>=2.0.0",
+]
+all = [
+    "vent4d-mech[medical,deep_learning,gpu,fem,visualization,data,parallel,monitoring,dev,docs]"
+]
+
+[project.urls]
+Homepage = "https://github.com/vent4d-mech/vent4d-mech"
+Documentation = "https://vent4d-mech.readthedocs.io"
+Repository = "https://github.com/vent4d-mech/vent4d-mech.git"
+Issues = "https://github.com/vent4d-mech/vent4d-mech/issues"
+
+[project.scripts]
+vent4d-mech = "vent4d_mech.cli:main"
+
+# Black Code Formatting
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.git
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | __pycache__
+  | \.pytest_cache
+)/
+'''
+
+# isort Import Sorting
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+include_trailing_comma = true
+known_first_party = ["vent4d_mech"]
+known_third_party = ["numpy", "scipy", "sklearn", "torch", "sitk", "nibabel"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+
+# MyPy Type Checking
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+strict_optional = true
+
+[[tool.mypy.overrides]]
+module = [
+    "SimpleITK.*",
+    "nibabel.*",
+    "pydicom.*",
+    "torch.*",
+    "torchvision.*",
+    "voxelmorph.*",
+    "cupy.*",
+    "numba.*",
+    "sfepy.*",
+    "pyvista.*",
+    "plotly.*",
+    "meshio.*",
+    "zarr.*",
+    "psutil.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+# Pytest Configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--cov=vent4d_mech",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "gpu: marks tests that require GPU",
+    "medical: marks tests that require medical image libraries",
+    "deep_learning: marks tests that require deep learning libraries",
+]
+minversion = "7.0"
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+# Coverage Configuration
+[tool.coverage.run]
+source = ["vent4d_mech"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+    "*/__pycache__/*",
+    "*/.*cache/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+    "@(typing\\.)?overload",
+]
+precision = 2
+show_missing = true
+skip_covered = false
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+# Bandit Security Linting
+[tool.bandit]
+exclude_dirs = ["tests", "test_*"]
+skips = ["B101", "B601"]  # Skip assert_used and shell_injection_python
+severity_level = "medium"
+
+# Interrogate Documentation Coverage
+[tool.interrogate]
+ignore_init-module = true
+ignore_init_method = true
+ignore_init_class = true
+fail_under = 80
+exclude = ["tests", "test_*", "setup.py"]
+verbose = 2
+quiet = false
+whitelist_regex = []
+ignore_regex = ["^get_", "^set_", "test_"]
+
+# Ruff (Fast Python Linter)
+[tool.ruff]
+target-version = "py38"
+line-length = 88
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "C90", # mccabe complexity
+    "I",  # isort compatibility
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "ARG001", # unused arguments in functions
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    ".tox",
+    "*.egg-info",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+]
+
+[tool.ruff.mccabe]
+max-complexity = 10
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+"tests/*" = ["ARG001", "F401"]  # Allow unused arguments and imports in tests
+
+# Benchmarking Configuration
+[tool.pytest-benchmark]
+min_rounds = 3
+max_time = 1.0
+min_time = 0.005
+timer = "time.perf_counter"
+histogram = true
+save_data = true
+json_file = "benchmark.json"
+regressions_fail = true
+regressions_threshold = 1.0
+sort = "min"
+only = "wall"
+disable_gc = true
+
+# Development Configuration
+[tool.devmode]
+# Enable development mode features
+debug = true
+hot_reload = true
+logging_level = "DEBUG"
+
+# Pre-commit Hooks Configuration
+[tool.pre-commit]
+repos = [
+    {
+        repo = "https://github.com/pre-commit/pre-commit-hooks",
+        rev = "v4.4.0",
+        hooks = [
+            {id = "trailing-whitespace"},
+            {id = "end-of-file-fixer"},
+            {id = "check-yaml"},
+            {id = "check-added-large-files"},
+            {id = "check-merge-conflict"},
+            {id = "debug-statements"},
+            {id = "check-toml"},
+        ],
+    },
+    {
+        repo = "https://github.com/psf/black",
+        rev = "23.7.0",
+        hooks = [
+            {id = "black"},
+        ],
+    },
+    {
+        repo = "https://github.com/pycqa/isort",
+        rev = "5.12.0",
+        hooks = [
+            {id = "isort"},
+        ],
+    },
+    {
+        repo = "https://github.com/pycqa/flake8",
+        rev = "6.0.0",
+        hooks = [
+            {id = "flake8"},
+        ],
+    },
+    {
+        repo = "https://github.com/pre-commit/mirrors-mypy",
+        rev = "v1.5.1",
+        hooks = [
+            {
+                id = "mypy",
+                additional_dependencies = ["types-all"],
+                exclude = "tests/",
+            },
+        ],
+    },
+    {
+        repo = "https://github.com/PyCQA/bandit",
+        rev = "1.7.5",
+        hooks = [
+            {id = "bandit", exclude = "tests/"},
+        ],
+    },
+    {
+        repo = "https://github.com/econchick/interrogate",
+        rev = "1.5.0",
+        hooks = [
+            {id = "interrogate"},
+        ],
+    },
+]
+
+# Quality Gates Configuration
+[tool.quality_gates]
+# Define quality metrics thresholds
+code_coverage_min = 80
+type_coverage_min = 90
+documentation_coverage_min = 80
+complexity_max = 10
+max_line_length = 88
+duplicated_lines_max = 3
+
+# Performance Gates
+[tool.performance_gates]
+max_execution_time_ms = 5000  # for critical functions
+max_memory_usage_mb = 1024   # for typical operations
+cache_hit_rate_min = 70      # percentage
+parallel_efficiency_min = 0.7  # speedup ratio
+
+# Security Gates
+[tool.security_gates]
+max_security_issues = 0
+max_high_vulnerabilities = 0
+max_medium_vulnerabilities = 2
+max_low_vulnerabilities = 10
