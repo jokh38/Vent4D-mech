@@ -106,6 +106,8 @@ class YoungsModulusEstimator:
 
     def estimate_modulus(self, observed_strain: np.ndarray,
                         deformation_gradient: np.ndarray,
+                        dvf: np.ndarray,
+                        voxel_spacing: Tuple[float, float, float],
                         initial_guess: Optional[np.ndarray] = None,
                         mask: Optional[np.ndarray] = None,
                         material_model: Optional[object] = None) -> Dict[str, Any]:
@@ -148,7 +150,9 @@ class YoungsModulusEstimator:
             'observed_strain': observed_strain,
             'deformation_gradient': deformation_gradient,
             'mask': mask,
-            'material_model': self.material_model
+            'material_model': self.material_model,
+            'dvf': dvf,
+            'voxel_spacing': voxel_spacing
         }
 
         # Solve inverse problem
@@ -352,46 +356,42 @@ class YoungsModulusEstimator:
     def _solve_forward_problem(self, modulus_field: np.ndarray,
                              problem_data: Dict[str, Any]) -> np.ndarray:
         """
-        Solve forward problem to compute strain from modulus.
-
-        Args:
-            modulus_field: Young's modulus distribution
-            problem_data: Problem data dictionary
-
-        Returns:
-            Predicted strain tensor field
+        Solve forward problem to compute strain from modulus using the injected FEM solver.
         """
-        # This is a simplified forward problem solver
-        # In practice, this would involve finite element analysis
+        if not hasattr(self, 'fem_solver') or self.fem_solver is None:
+            raise RuntimeError("FEM solver is not injected into YoungsModulusEstimator.")
 
-        observed_strain = problem_data['observed_strain']
-        deformation_gradient = problem_data['deformation_gradient']
+        self.logger.info("Solving forward problem using injected FEM solver...")
 
-        # For linear elastic case: σ = E * ε
-        if self.config['material']['constitutive_model'] == 'linear_elastic':
-            # Compute stress from observed strain
-            poisson_ratio = self.config['material']['poisson_ratio']
+        # Prepare material properties for the FEM solver
+        material_properties = {
+            'youngs_modulus': modulus_field,
+            'poisson_ratio': np.full_like(modulus_field, self.config['material']['poisson_ratio'])
+        }
 
-            # Lame parameters
-            lambda_lame = (modulus_field * poisson_ratio) / ((1 + poisson_ratio) * (1 - 2 * poisson_ratio))
-            mu_lame = modulus_field / (2 * (1 + poisson_ratio))
+        # The FEM workflow requires the full DVF for boundary conditions,
+        # and a lung mask for mesh generation. These should be in problem_data.
+        lung_mask = problem_data.get('mask')
+        dvf = problem_data.get('dvf')
+        voxel_spacing = problem_data.get('voxel_spacing')
 
-            # Compute stress tensor
-            strain_trace = np.trace(observed_strain, axis1=3, axis2=4)
-            stress_tensor = lambda_lame[..., np.newaxis, np.newaxis] * strain_trace[..., np.newaxis, np.newaxis] * np.eye(3) + \
-                           2 * mu_lame[..., np.newaxis, np.newaxis] * observed_strain
+        if lung_mask is None or dvf is None or voxel_spacing is None:
+            raise ValueError("Forward problem requires lung_mask, dvf, and voxel_spacing in problem_data.")
 
-            # For inverse problem, we assume the same strain distribution
-            # but scaled by the modulus difference
-            reference_modulus = self.config['material']['initial_modulus']
-            modulus_ratio = modulus_field / reference_modulus
+        # Run the full FEM simulation
+        fem_results = self.fem_solver.run_simulation(
+            lung_mask=lung_mask,
+            displacement_field=dvf,
+            material_properties=material_properties,
+            voxel_spacing=voxel_spacing
+        )
 
-            predicted_strain = observed_strain / modulus_ratio[..., np.newaxis, np.newaxis]
+        # The FEM results should contain the computed strain field.
+        # This depends on the post-processing implementation.
+        predicted_strain = fem_results['processed_results'].get('strain_tensor')
 
-        else:
-            # For hyperelastic models, this would require more complex analysis
-            # Here we use a simplified approach
-            predicted_strain = observed_strain.copy()
+        if predicted_strain is None:
+            raise RuntimeError("FEM simulation did not produce a 'strain_tensor' in its results.")
 
         return predicted_strain
 

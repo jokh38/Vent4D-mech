@@ -22,6 +22,11 @@ class MockNumPy:
         """Mock array creation."""
         return data if isinstance(data, list) else [[data]]
 
+    @property
+    def ndarray(self):
+        """Mock ndarray type."""
+        return list # Use list as a mock type for isinstance checks
+
     def eye(self, n):
         """Mock identity matrix."""
         return [[1 if i == j else 0 for j in range(n)] for i in range(n)]
@@ -82,8 +87,36 @@ try:
     import scipy
 except ImportError:
     # Create minimal scipy mock
-    sys.modules['scipy'] = type('MockScipy', (), {})()
-    sys.modules['scipy.optimize'] = type('MockOptimize', (), {})()
+    mock_scipy = type('MockScipy', (), {})()
+    mock_optimize = type('MockOptimize', (), {})()
+
+    # Mock ndimage submodule
+    mock_ndimage = type('MockNdimage', (), {})()
+    def mock_map_coordinates(data, coords, order=1, mode='nearest'):
+        # Simplified mock: return a flattened version of the input data
+        # of the same length as the coordinates.
+        flat_data = [item for sublist in data for item in sublist]
+        return flat_data[:len(coords[0])]
+    mock_ndimage.map_coordinates = mock_map_coordinates
+
+    mock_scipy.optimize = mock_optimize
+    mock_scipy.ndimage = mock_ndimage
+
+    # Mock interpolate submodule
+    mock_interpolate = type('MockInterpolate', (), {})()
+    class MockInterpolator:
+        def __init__(self, points, values):
+            pass
+        def __call__(self, xi):
+            # Return a simple array of the correct shape
+            return [0.5] * len(xi)
+    mock_interpolate.RegularGridInterpolator = MockInterpolator
+    mock_scipy.interpolate = mock_interpolate
+
+    sys.modules['scipy'] = mock_scipy
+    sys.modules['scipy.optimize'] = mock_optimize
+    sys.modules['scipy.ndimage'] = mock_ndimage
+    sys.modules['scipy.interpolate'] = mock_interpolate
 
 
 @pytest.fixture

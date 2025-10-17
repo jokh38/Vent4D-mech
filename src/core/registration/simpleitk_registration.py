@@ -61,7 +61,8 @@ class SimpleITKRegistration:
 
         # Initialize registration method
         self.registration_method = None
-        self._initialize_registration_method()
+        if self.config.get('method') == 'bspline':
+            self._initialize_registration_method()
 
         self.logger.info("Initialized SimpleITKRegistration")
 
@@ -87,25 +88,19 @@ class SimpleITKRegistration:
             'sampling_percentage': 0.2,
             'sampling_strategy': 'random',
             'interpolator': 'linear',  # 'linear', 'bspline', 'nearest_neighbor'
+            'demons_type': 'symmetric', # 'symmetric', 'fast', 'standard'
             'demons_update_factor': 1.0,
             'demons_histogram_matching': True
         }
 
     def _initialize_registration_method(self) -> None:
         """
-        Initialize the SimpleITK registration method based on configuration.
+        Initialize the SimpleITK registration method for B-spline.
         """
+        if self.config['method'] != 'bspline':
+            return
         self.registration_method = sitk.ImageRegistrationMethod()
-
-        # Set method-specific parameters
-        if self.config['method'] == 'bspline':
-            self._setup_bspline_registration()
-        elif self.config['method'] == 'demons':
-            self._setup_demons_registration()
-        else:
-            raise ValueError(f"Unsupported registration method: {self.config['method']}")
-
-        # Set common parameters
+        self._setup_bspline_registration()
         self._setup_common_parameters()
 
     def _setup_bspline_registration(self) -> None:
@@ -147,13 +142,6 @@ class SimpleITKRegistration:
                 functionConvergenceTolerance=1e-6,
                 numberOfIterations=self.config['max_iterations']
             )
-
-    def _setup_demons_registration(self) -> None:
-        """
-        Setup Demons registration parameters.
-        """
-        # Demons uses a different setup
-        pass  # Demons will be set up in register_images method
 
     def _setup_common_parameters(self) -> None:
         """
@@ -277,7 +265,7 @@ class SimpleITKRegistration:
         ]
 
         initial_transform = sitk.BSplineTransformInitializer(
-            fixed_image, mesh_size
+            fixed_image, mesh_size, order=3
         )
         self.registration_method.SetInitialTransform(initial_transform, inPlace=True)
 
@@ -306,15 +294,26 @@ class SimpleITKRegistration:
         Returns:
             Tuple of (transform, final_metric_value)
         """
-        # Setup demons registration
-        demons_filter = sitk.DemonsRegistrationFilter()
+        # Setup demons registration based on type
+        demons_type = self.config.get('demons_type', 'symmetric')
+        if demons_type == 'symmetric':
+            demons_filter = sitk.SymmetricForcesDemonsRegistrationFilter()
+        elif demons_type == 'fast':
+            demons_filter = sitk.FastSymmetricForcesDemonsRegistrationFilter()
+        elif demons_type == 'standard':
+            demons_filter = sitk.DemonsRegistrationFilter()
+        else:
+            raise ValueError(f"Unsupported demons type: {demons_type}")
 
         demons_filter.SetNumberOfIterations(self.config['max_iterations'])
         demons_filter.SetStandardDeviations(1.0)
-        demons_filter.SetUpdateFieldRegularizationType(sitk.DemonsRegistrationFilter.regularizer_gaussian)
-        demons_filter.SetUpdateFieldRegularizationSigma(1.0)
 
-        if mask is not None:
+        # Regularization is available in Symmetric and Fast variants
+        if hasattr(demons_filter, 'SetUpdateFieldRegularizationType'):
+            demons_filter.SetUpdateFieldRegularizationType(sitk.DemonsRegistrationFilter.regularizer_gaussian)
+            demons_filter.SetUpdateFieldRegularizationSigma(1.0)
+
+        if mask is not None and hasattr(demons_filter, 'SetUseMask'):
             demons_filter.SetUseMask(True)
             demons_filter.SetFixedImageMask(mask)
 

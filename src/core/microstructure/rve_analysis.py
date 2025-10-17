@@ -412,6 +412,50 @@ class RVEAnalysis:
         self.logger.info("Convergence study completed")
         return convergence_results
     
+    def analyze_rve_for_hu(self, hu_value: float) -> Dict[str, float]:
+        """
+        Perform full RVE analysis for a given HU value.
+
+        This method simulates the entire multi-scale workflow for a single point.
+
+        Args:
+            hu_value: Hounsfield Unit value to analyze
+
+        Returns:
+            Dictionary of effective material properties
+        """
+        self.logger.info(f"Performing RVE analysis for HU value: {hu_value}")
+
+        # 1. Get microstructure data corresponding to HU value (placeholder)
+        # In a real scenario, this would query HOA or another atlas
+        microstructure_data = {'source': 'HOA_placeholder', 'hu': hu_value}
+
+        # 2. Generate RVE geometry based on the microstructure
+        rve_size = tuple(self.config.get('rve_size', (0.1, 0.1, 0.1)))
+        geometry = self.generate_rve_geometry(microstructure_data, rve_size)
+
+        # 3. Define material properties for different tissue phases (placeholder)
+        # These would come from literature or finer-scale models
+        material_properties = {
+            1: {'youngs_modulus': 10.0, 'poisson_ratio': 0.48}, # Alveolar tissue
+            2: {'youngs_modulus': 50.0, 'poisson_ratio': 0.45}, # Connective tissue
+            3: {'youngs_modulus': 20.0, 'poisson_ratio': 0.49}  # Vascular tissue
+        }
+
+        # 4. Apply boundary conditions (e.g., uniaxial strain)
+        boundary_conditions = self.apply_boundary_conditions(geometry, 'uniaxial')
+
+        # 5. Solve the RVE problem using FEA
+        solution = self.solve_rve(geometry, boundary_conditions, material_properties)
+
+        # 6. Return the homogenized, effective properties
+        if solution['converged']:
+            self.logger.info(f"RVE analysis for HU {hu_value} successful.")
+            return solution['effective_properties']
+        else:
+            self.logger.error(f"RVE analysis for HU {hu_value} failed to converge.")
+            raise RuntimeError(f"RVE analysis failed for HU {hu_value}")
+
     def __repr__(self) -> str:
         """String representation of the RVEAnalysis instance."""
         return f"RVEAnalysis(solver='{self.solver_type}', element_type='{self.element_type}')"

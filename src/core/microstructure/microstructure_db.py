@@ -329,12 +329,26 @@ class MicrostructureDB:
 
         # Generate or load RVE data for each HU bin
         for i, hu_value in enumerate(self.lookup_table['hu_bins']):
-            # Estimate tissue properties based on HU value
-            # This is a simplified mapping - in practice, this would use RVE analysis
-            properties = self._estimate_properties_from_hu(hu_value)
+            # In a real implementation, this would involve a complex multi-scale workflow:
+            # 1. Find a representative RVE from HOA data corresponding to hu_value
+            # 2. Perform micro-FE analysis on the RVE mesh
+            # 3. Homogenize the results to get effective material properties
+
+            # Here, we use a placeholder function that simulates this process.
+            self.logger.debug(f"Running simulated RVE analysis for HU: {hu_value}")
+
+            try:
+                # This call represents the computationally expensive RVE analysis
+                properties = self.rve_analysis.analyze_rve_for_hu(hu_value)
+            except Exception as e:
+                self.logger.warning(f"RVE analysis failed for HU {hu_value}: {e}. Falling back to estimation.")
+                # Fallback to a simpler estimation if full analysis fails
+                properties = self._estimate_properties_from_hu(hu_value)
+
 
             for property_name, value in properties.items():
-                self.lookup_table[property_name][i] = value
+                if property_name in self.lookup_table:
+                    self.lookup_table[property_name][i] = value
 
         # Save lookup table
         self._save_lookup_table()
@@ -374,28 +388,45 @@ class MicrostructureDB:
 
     def _train_surrogate_model(self) -> None:
         """
-        Train surrogate model using generated data.
+        Train surrogate model using data generated from RVE analysis.
         """
-        self.logger.info("Training surrogate model...")
+        self.logger.info("Training surrogate model based on RVE analysis data...")
 
-        # Generate training data (simplified)
-        n_samples = 1000
-        hu_values = np.random.uniform(-1000, 400, n_samples)
+        # Generate training data by running RVE analysis for a range of HU values
+        n_samples = self.config['rve'].get('rve_count_for_training', 100)
+        hu_values = np.linspace(-1000, 400, n_samples)
 
-        X = hu_values.reshape(-1, 1)
-        y = np.zeros((n_samples, 3))
+        # Input features (X) and output properties (y)
+        X_features = []
+        y_properties = []
 
-        for i, hu_val in enumerate(hu_values):
-            properties = self._estimate_properties_from_hu(hu_val)
-            y[i, 0] = properties['youngs_modulus']
-            y[i, 1] = properties['poisson_ratio']
-            y[i, 2] = properties['bulk_modulus']
+        for hu_val in hu_values:
+            try:
+                # Run the full, computationally intensive RVE analysis
+                properties = self.rve_analysis.analyze_rve_for_hu(hu_val)
 
-        # Train model
-        self.surrogate_models.train(X, y)
+                # For now, we only use HU value as input feature
+                X_features.append([hu_val])
+
+                # Collect output properties
+                y_row = [properties.get(p, 0) for p in self.config['surrogate_models']['output_properties']]
+                y_properties.append(y_row)
+
+            except Exception as e:
+                self.logger.warning(f"Could not generate training sample for HU {hu_val}: {e}")
+
+        if not X_features:
+            self.logger.error("Failed to generate any training data for surrogate model.")
+            return
+
+        X_train = np.array(X_features)
+        y_train = np.array(y_properties)
+
+        # Train the surrogate model
+        self.surrogate_models.train(X_train, y_train)
         self.surrogate_model = self.surrogate_models.get_model()
 
-        # Save model
+        # Save the trained model
         self._save_surrogate_model()
 
     def _load_lookup_table(self) -> bool:

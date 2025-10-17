@@ -1,3 +1,109 @@
+Metadata-Version: 2.4
+Name: vent4d-mech
+Version: 0.1.0
+Summary: Python-based Lung Tissue Dynamics Modeling
+Home-page: https://github.com/your-org/vent4d-mech
+Author: Vent4D-Mech Development Team
+Author-email: Vent4D-Mech Team <vent4d-mech@example.com>
+License: MIT License
+
+        Copyright (c) 2024 Vent4D-Mech Development Team
+
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+Project-URL: Homepage, https://github.com/vent4d-mech/vent4d-mech
+Project-URL: Documentation, https://vent4d-mech.readthedocs.io
+Project-URL: Repository, https://github.com/vent4d-mech/vent4d-mech.git
+Project-URL: Issues, https://github.com/vent4d-mech/vent4d-mech/issues
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Scientific/Engineering :: Medical Science Apps.
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: scipy>=1.10.0
+Requires-Dist: scikit-learn>=1.3.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: click>=8.1.0
+Requires-Dist: tqdm>=4.65.0
+Requires-Dist: rich>=13.6.0
+Requires-Dist: pydantic>=2.0.0
+Provides-Extra: medical
+Requires-Dist: SimpleITK>=2.3.0; extra == "medical"
+Requires-Dist: nibabel>=5.1.0; extra == "medical"
+Requires-Dist: pydicom>=2.4.0; extra == "medical"
+Provides-Extra: deep-learning
+Requires-Dist: torch>=2.0.0; extra == "deep-learning"
+Requires-Dist: torchvision>=0.15.0; extra == "deep-learning"
+Requires-Dist: voxelmorph>=0.2.0; extra == "deep-learning"
+Provides-Extra: gpu
+Requires-Dist: cupy-cuda11x>=12.0.0; extra == "gpu"
+Requires-Dist: numba>=0.58.0; extra == "gpu"
+Provides-Extra: fem
+Requires-Dist: sfepy>=2025.2.0; extra == "fem"
+Provides-Extra: visualization
+Requires-Dist: matplotlib>=3.7.0; extra == "visualization"
+Requires-Dist: seaborn>=0.12.0; extra == "visualization"
+Requires-Dist: plotly>=5.15.0; extra == "visualization"
+Requires-Dist: pyvista>=0.42.0; extra == "visualization"
+Provides-Extra: data
+Requires-Dist: pandas>=2.0.0; extra == "data"
+Requires-Dist: h5py>=3.9.0; extra == "data"
+Requires-Dist: meshio>=5.3.0; extra == "data"
+Requires-Dist: zarr>=2.16.0; extra == "data"
+Provides-Extra: parallel
+Requires-Dist: joblib>=1.3.0; extra == "parallel"
+Requires-Dist: multiprocessing-logging>=0.3.4; extra == "parallel"
+Provides-Extra: monitoring
+Requires-Dist: psutil>=5.9.0; extra == "monitoring"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: pytest-xdist>=3.3.0; extra == "dev"
+Requires-Dist: pytest-benchmark>=4.0.0; extra == "dev"
+Requires-Dist: black>=23.7.0; extra == "dev"
+Requires-Dist: isort>=5.12.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Requires-Dist: mypy>=1.5.0; extra == "dev"
+Requires-Dist: pre-commit>=3.3.0; extra == "dev"
+Requires-Dist: bandit>=1.7.0; extra == "dev"
+Requires-Dist: safety>=2.3.0; extra == "dev"
+Requires-Dist: interrogate>=1.5.0; extra == "dev"
+Provides-Extra: docs
+Requires-Dist: sphinx>=7.1.0; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=1.3.0; extra == "docs"
+Requires-Dist: sphinx-autodoc-typehints>=1.24.0; extra == "docs"
+Requires-Dist: myst-parser>=2.0.0; extra == "docs"
+Provides-Extra: all
+Requires-Dist: vent4d-mech[data,deep_learning,dev,docs,fem,gpu,medical,monitoring,parallel,visualization]; extra == "all"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
 # Vent4D-Mech: Python-based Lung Tissue Dynamics Modeling
 
 A comprehensive framework for patient-specific lung biomechanical modeling from 4D-CT to high-fidelity ventilation analysis.
