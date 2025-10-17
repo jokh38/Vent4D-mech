@@ -10,12 +10,7 @@ import os
 import tempfile
 import logging
 
-# Add project to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-
-# Import modules directly to avoid package import issues
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'vent4d_mech', 'utils'))
-import logging_utils
+from src.utils import logging_utils
 
 
 class TestLoggingUtils:

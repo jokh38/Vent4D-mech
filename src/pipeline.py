@@ -10,15 +10,18 @@ import numpy as np
 import logging
 from pathlib import Path
 
-from .core.registration import ImageRegistration
-from .core.deformation import DeformationAnalyzer
-from .core.mechanical import MechanicalModeler
-from .core.inverse import YoungsModulusEstimator
-from .core.microstructure import MicrostructureDB
-from .core.fem import FEMWorkflow
-from .core.ventilation import VentilationCalculator
+from .core.registration.simpleitk_registration import SimpleITKRegistration
+from .core.registration.voxelmorph_registration import VoxelMorphRegistration
+from .core.deformation.deformation_analyzer import DeformationAnalyzer
+from .core.mechanical.mechanical_modeler import MechanicalModeler
+from .core.inverse.youngs_modulus_estimator import YoungsModulusEstimator
+from .core.microstructure.microstructure_db import MicrostructureDB
+from .core.fem.fem_workflow import FEMWorkflow
+from .core.ventilation.ventilation_calculator import VentilationCalculator
 from .config import ConfigManager
-from .utils import IOUtils, ValidationUtils, PerformanceUtils
+from .utils.io_utils import IOUtils
+from .utils.validation_utils import ValidationUtils
+from .utils.performance_utils import PerformanceUtils
 
 
 class Vent4DMechPipeline:
@@ -66,43 +69,53 @@ class Vent4DMechPipeline:
 
     def _initialize_components(self) -> None:
         """
-        Initialize all pipeline components.
+        Initialize all pipeline components based on configuration.
         """
         try:
+            gpu_enabled = self.config.get('performance.gpu_acceleration', True)
+
             # Image registration
-            self.components['registration'] = ImageRegistration(
-                method=self.config.get('registration.method', 'voxelmorph'),
-                config=self.config.get_section('registration'),
-                gpu=self.config.get('performance.gpu_acceleration', True)
-            )
+            reg_method = self.config.get('registration.method', 'voxelmorph')
+            if reg_method == 'simpleitk':
+                self.components['registration'] = SimpleITKRegistration(
+                    config=self.config.get_section('registration'),
+                    gpu=gpu_enabled
+                )
+            elif reg_method == 'voxelmorph':
+                self.components['registration'] = VoxelMorphRegistration(
+                    config=self.config.get_section('registration'),
+                    gpu=gpu_enabled
+                )
+            else:
+                raise ValueError(f"Unsupported registration method: {reg_method}")
 
             # Deformation analysis
             self.components['deformation'] = DeformationAnalyzer(
                 config=self.config.get_section('deformation'),
-                gpu=self.config.get('performance.gpu_acceleration', True)
+                gpu=gpu_enabled
             )
 
-            # Mechanical modeler
-            self.components['mechanical'] = MechanicalModeler(
-                config=self.config.get_section('mechanical')
+            # FEM workflow (initialize before inverse solver)
+            self.components['fem_workflow'] = FEMWorkflow(
+                config=self.config.get_section('fem')
             )
 
-            # Young's modulus estimator
+            # Young's modulus estimator (inject FEM solver)
             self.components['inverse'] = YoungsModulusEstimator(
                 config=self.config.get_section('inverse')
             )
+            # Injecting the FEM solver into the inverse problem solver
+            self.components['inverse'].fem_solver = self.components['fem_workflow'].fem_solver
+
 
             # Microstructure database
             self.components['microstructure'] = MicrostructureDB(
                 config=self.config.get_section('microstructure')
             )
 
-            # FEM workflow
-            self.components['fem'] = FEMWorkflow(
-                config=self.config.get_section('fem')
-            )
-
             # Ventilation calculator
+            # Assuming ventilation calculator exists and is correctly named
+            # from .core.ventilation.ventilation_calculator import VentilationCalculator
             self.components['ventilation'] = VentilationCalculator(
                 config=self.config.get_section('ventilation')
             )
@@ -252,6 +265,8 @@ class Vent4DMechPipeline:
                 modulus_results = self.components['inverse'].estimate_modulus(
                     observed_strain=self.results['deformation']['strain_tensor'],
                     deformation_gradient=self.results['deformation']['deformation_gradient'],
+                    dvf=self.results['registration']['dvf'],
+                    voxel_spacing=self.data['voxel_spacing'],
                     mask=self.data['lung_mask']
                 )
                 self.results['material_estimation'] = {
@@ -262,10 +277,15 @@ class Vent4DMechPipeline:
             # Stage 4: FEM simulation
             if 'fem_simulation' in stages and self.data['lung_mask'] is not None:
                 self.logger.info("Stage 4: FEM simulation")
-                fem_results = self.components['fem'].run_simulation(
+                # Use the estimated modulus from the previous step
+                estimated_modulus = self.results['material_estimation']['inverse_estimation']['youngs_modulus']
+                material_props = {'youngs_modulus': estimated_modulus,
+                                  'poisson_ratio': np.full_like(estimated_modulus, 0.45)}
+
+                fem_results = self.components['fem_workflow'].run_simulation(
                     lung_mask=self.data['lung_mask'],
                     displacement_field=self.results['registration']['dvf'],
-                    material_properties=self.results['material_estimation']['inverse_estimation']['youngs_modulus'],
+                    material_properties=material_props,
                     voxel_spacing=self.data['voxel_spacing']
                 )
                 self.results['fem_simulation'] = fem_results

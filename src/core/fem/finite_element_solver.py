@@ -18,88 +18,124 @@ from numpy.typing import NDArray
 from scipy.sparse import csc_matrix, csr_matrix
 from scipy.sparse.linalg import spsolve
 
-# Core classes
+import logging
+try:
+    import sfepy
+    from sfepy.discrete.fem import Mesh, FEDomain, Field
+    from sfepy.discrete.fem.fields import FieldVariable
+    from sfepy.terms import Term
+    from sfepy.materials import Material
+    from sfepy.integrals import Integral
+    from sfepy.base.base import Struct
+    from sfepy.solvers.ls import ScipyDirect
+    from sfepy.solvers.nls import Newton
+    from sfepy.mechanics.matcoefs import stiffness_from_lame
+    from sfepy.discrete import Problem
+    from sfepy.discrete.fem.bcs import EssentialBC
+    from sfepy.base.conf import ProblemConf
+    SFEPY_AVAILABLE = True
+except ImportError:
+    SFEPY_AVAILABLE = False
+
 class FEMSolver:
-    """Main finite element solver class."""
-    pass
+    """
+    Main finite element solver class using SfePy as a backend.
+    """
+    def __init__(self, config: Dict[str, Any]):
+        if not SFEPY_AVAILABLE:
+            raise ImportError("SfePy is not available. Install with: pip install sfepy")
 
-class NonlinearSolver:
-    """Handles nonlinear solution procedures (Newton-Raphson)."""
-    pass
+        self.config = config
+        self.logger = logging.getLogger(__name__)
+        self.problem = None
+        self.logger.info("Initialized FEMSolver with SfePy backend.")
 
-class LinearSolver:
-    """Handles linear system solution."""
-    pass
+    def create_problem(self, mesh_data: Dict, boundary_conditions: Dict, material_properties: Dict) -> Problem:
+        """
+        Create an SfePy Problem definition.
+        """
+        # 1. Create SfePy Mesh and Domain
+        mesh = Mesh.from_dict(mesh_data)
+        domain = FEDomain('domain', mesh)
 
-class ElementAssembler:
-    """Assembles element contributions to global system."""
-    pass
+        # 2. Define Field
+        field = Field.from_args('fu', np.float64, 'vector', domain, approx_order=1)
 
-class BoundaryConditionHandler:
-    """Manages boundary conditions for FEM analysis."""
-    pass
+        # 3. Define Variables
+        u = FieldVariable('u', 'unknown', field)
+        v = FieldVariable('v', 'test', field, primary_var_name='u')
 
-class ConvergenceController:
-    """Controls convergence criteria and load stepping."""
-    pass
+        # 4. Define Material and Equations based on config
+        integral = Integral('i', order=2) # Order 2 for hyperelasticity
 
-# Function placeholders
-def assemble_stiffness_matrix(
-    nodes: NDArray[np.float64],
-    elements: NDArray[np.int32],
-    material_model,
-    displacement_field: Optional[NDArray[np.float64]] = None
-) -> csc_matrix:
-    """Assemble global stiffness matrix."""
-    pass
+        model_name = self.config.get('material_model', 'neo_hookean')
 
-def assemble_internal_force_vector(
-    nodes: NDArray[np.float64],
-    elements: NDArray[np.int32],
-    material_model,
-    displacement_field: NDArray[np.float64]
-) -> NDArray[np.float64]:
-    """Assemble internal force vector."""
-    pass
+        if model_name == 'neo_hookean':
+            C10 = material_properties.get('C10', 0.135)
+            D1 = material_properties.get('D1', 2.0 / 1000)
+            m = Material('m', C10=C10, D1=D1)
+            term = Term.new('dw_tl_he_neohook(m.C10, m.D1, v, u)', integral)
+        elif model_name == 'mooney_rivlin':
+            C10 = material_properties.get('C10', 0.1)
+            C01 = material_properties.get('C01', 0.035)
+            D1 = material_properties.get('D1', 2.0 / 1000)
+            m = Material('m', C10=C10, C01=C01, D1=D1)
+            term = Term.new('dw_tl_he_mooney_rivlin(m.C10, m.C01, m.D1, v, u)', integral)
+        else:
+            raise ValueError(f"Unsupported material model for SfePy solver: {model_name}")
 
-def apply_boundary_conditions(
-    stiffness_matrix: csc_matrix,
-    force_vector: NDArray[np.float64],
-    boundary_conditions: Dict[str, NDArray[np.float64]]
-) -> Tuple[csc_matrix, NDArray[np.float64]]:
-    """Apply boundary conditions to linear system."""
-    pass
+        equations = Equations([term])
 
-def solve_nonlinear_fem(
-    nodes: NDArray[np.float64],
-    elements: NDArray[np.int32],
-    material_model,
-    boundary_conditions: Dict[str, NDArray[np.float64]],
-    load_steps: int = 10,
-    tolerance: float = 1e-6
-) -> Dict[str, NDArray[np.float64]]:
-    """Solve nonlinear FEM problem."""
-    pass
+        # 6. Define Boundary Conditions
+        ebcs = []
+        for bc_name, bc_data in boundary_conditions.items():
+            # Assuming bc_data contains region, dofs, and values
+            region = domain.regions.find(bc_data['region'])
+            ebcs.append(EssentialBC(bc_name, region, {f'u.{dof}': val for dof, val in zip(bc_data['dofs'], bc_data['values'])}))
 
-def compute_element_stiffness(
-    element_nodes: NDArray[np.float64],
-    material_model,
-    element_type: str = 'tetrahedral'
-) -> NDArray[np.float64]:
-    """Compute element stiffness matrix."""
-    pass
+        # 7. Define Solvers
+        ls = ScipyDirect({})
+        nls_conf = Struct(name='newton', kind='nls.newton',
+                          i_max=self.config.get('max_iterations', 10),
+                          eps_a=self.config.get('tolerance', 1e-6))
+
+        # 8. Create Problem
+        problem_conf = Struct(name='pde', ebcs=ebcs, materials={'m': (m,)}, fields={'fu': field})
+        self.problem = Problem.from_conf(problem_conf, equations=equations)
+        self.problem.set_solvers(ls=ls, nls=nls_conf)
+        self.problem.set_variables([u, v])
+
+        return self.problem
+
+    def solve(self, problem: Optional[Problem] = None) -> Dict:
+        """
+        Solve the defined FEM problem.
+        """
+        if problem is None:
+            problem = self.problem
+
+        if problem is None:
+            raise RuntimeError("FEM problem is not defined.")
+
+        self.logger.info("Solving FEM problem with SfePy...")
+        state = problem.solve()
+
+        solution = state.get_parts()
+        displacements = solution['u']
+
+        # Here you would compute stress, strain etc. from the state vector
+        # For now, we just return the displacement
+
+        return {'displacements': displacements.reshape(problem.domain.shape.n_nod, -1)}
+
+    def save_solution(self, solution: Dict, filepath: str):
+        """
+        Save the solution to a file (e.g., VTK).
+        """
+        self.problem.save_state(filepath, solution['displacements'])
+        self.logger.info(f"Solution saved to {filepath}")
 
 # Export symbols
 __all__ = [
-    "FEMSolver",
-    "NonlinearSolver",
-    "LinearSolver", 
-    "ElementAssembler",
-    "BoundaryConditionHandler",
-    "ConvergenceController",
-    "assemble_stiffness_matrix",
-    "assemble_internal_force_vector",
-    "apply_boundary_conditions",
-    "solve_nonlinear_fem",
-    "compute_element_stiffness"
+    "FEMSolver"
 ]

@@ -330,9 +330,9 @@ class VoxelMorphRegistration:
             val_dataset = VoxelMorphDataset(validation_data)
             val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-        # Define loss functions
+        # Define loss functions for unsupervised learning
         similarity_loss = vxm.losses.MSE().loss
-        regularization_loss = vxm.losses.Grad('l2', loss_mult=2).loss
+        regularization_loss = vxm.losses.Grad('l2', loss_mult=self.config['loss_weights']['regularization']).loss
 
         # Training loop
         training_history = {
@@ -347,17 +347,20 @@ class VoxelMorphRegistration:
         best_val_loss = float('inf')
         patience_counter = 0
 
+        # Initialize spatial transformer for applying DVF
+        transformer = vxm.layers.SpatialTransformer(self.config['input_shape']).to(self.device)
+
         for epoch in range(epochs):
             # Training
             train_metrics = self._train_epoch(
-                train_loader, similarity_loss, regularization_loss
+                train_loader, transformer, similarity_loss, regularization_loss
             )
 
             # Validation
             val_metrics = {}
             if val_loader:
                 val_metrics = self._validate_epoch(
-                    val_loader, similarity_loss, regularization_loss
+                    val_loader, transformer, similarity_loss, regularization_loss
                 )
 
             # Update history
@@ -395,12 +398,13 @@ class VoxelMorphRegistration:
         self.logger.info("VoxelMorph training completed")
         return training_history
 
-    def _train_epoch(self, train_loader: DataLoader, similarity_loss, regularization_loss) -> Dict[str, float]:
+    def _train_epoch(self, train_loader: DataLoader, transformer: nn.Module, similarity_loss, regularization_loss) -> Dict[str, float]:
         """
-        Train for one epoch.
+        Train for one epoch using unsupervised learning.
 
         Args:
             train_loader: Training data loader
+            transformer: Spatial transformer for applying DVF
             similarity_loss: Similarity loss function
             regularization_loss: Regularization loss function
 
@@ -414,21 +418,18 @@ class VoxelMorphRegistration:
         num_batches = 0
 
         for batch in train_loader:
-            fixed, moving, target_dvf = batch
-            fixed = fixed.to(self.device)
-            moving = moving.to(self.device)
-            target_dvf = target_dvf.to(self.device)
+            fixed, moving = [d.to(self.device) for d in batch]
 
             self.optimizer.zero_grad()
 
             # Forward pass
-            predicted_dvf = self.model(fixed, moving)
+            dvf = self.model(moving, fixed)
+            moved_image = transformer(moving, dvf)
 
             # Compute losses
-            sim_loss = similarity_loss(predicted_dvf, target_dvf)
-            reg_loss = regularization_loss(predicted_dvf, target_dvf)
-            total = (self.config['loss_weights']['similarity'] * sim_loss +
-                    self.config['loss_weights']['regularization'] * reg_loss)
+            sim_loss = similarity_loss(moved_image, fixed)
+            reg_loss = regularization_loss(dvf, dvf) # VoxelMorph's Grad loss takes two inputs
+            total = self.config['loss_weights']['similarity'] * sim_loss + reg_loss # reg_loss already has weight
 
             # Backward pass
             total.backward()
@@ -446,12 +447,13 @@ class VoxelMorphRegistration:
             'regularization_loss': total_regularization / num_batches
         }
 
-    def _validate_epoch(self, val_loader: DataLoader, similarity_loss, regularization_loss) -> Dict[str, float]:
+    def _validate_epoch(self, val_loader: DataLoader, transformer: nn.Module, similarity_loss, regularization_loss) -> Dict[str, float]:
         """
-        Validate for one epoch.
+        Validate for one epoch using unsupervised learning.
 
         Args:
             val_loader: Validation data loader
+            transformer: Spatial transformer for applying DVF
             similarity_loss: Similarity loss function
             regularization_loss: Regularization loss function
 
@@ -466,19 +468,16 @@ class VoxelMorphRegistration:
 
         with torch.no_grad():
             for batch in val_loader:
-                fixed, moving, target_dvf = batch
-                fixed = fixed.to(self.device)
-                moving = moving.to(self.device)
-                target_dvf = target_dvf.to(self.device)
+                fixed, moving = [d.to(self.device) for d in batch]
 
                 # Forward pass
-                predicted_dvf = self.model(fixed, moving)
+                dvf = self.model(moving, fixed)
+                moved_image = transformer(moving, dvf)
 
                 # Compute losses
-                sim_loss = similarity_loss(predicted_dvf, target_dvf)
-                reg_loss = regularization_loss(predicted_dvf, target_dvf)
-                total = (self.config['loss_weights']['similarity'] * sim_loss +
-                        self.config['loss_weights']['regularization'] * reg_loss)
+                sim_loss = similarity_loss(moved_image, fixed)
+                reg_loss = regularization_loss(dvf, dvf)
+                total = self.config['loss_weights']['similarity'] * sim_loss + reg_loss
 
                 # Update metrics
                 total_loss += total.item()
@@ -566,28 +565,25 @@ class VoxelMorphDataset(Dataset):
         """Get dataset length."""
         return len(self.data)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Get item from dataset.
+        Get item from dataset for unsupervised learning.
 
         Args:
             idx: Sample index
 
         Returns:
-            Tuple of (fixed, moving, dvf) tensors
+            Tuple of (fixed, moving) tensors
         """
         sample = self.data[idx]
 
         fixed = torch.from_numpy(sample['fixed']).float()
         moving = torch.from_numpy(sample['moving']).float()
-        dvf = torch.from_numpy(sample['dvf']).float()
 
         # Add channel dimension
         if fixed.dim() == 3:
             fixed = fixed.unsqueeze(0)
         if moving.dim() == 3:
             moving = moving.unsqueeze(0)
-        if dvf.dim() == 4:
-            dvf = dvf.permute(3, 0, 1, 2)  # (3, D, H, W)
 
-        return fixed, moving, dvf
+        return fixed, moving

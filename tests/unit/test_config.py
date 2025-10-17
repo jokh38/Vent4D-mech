@@ -8,13 +8,7 @@ import pytest
 import sys
 import os
 
-# Add project to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-
-# Import config modules directly to avoid package import issues
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'vent4d_mech', 'config'))
-import default_config
-import config_validation
+from src.config import default_config, config_validation
 
 
 class TestDefaultConfig:

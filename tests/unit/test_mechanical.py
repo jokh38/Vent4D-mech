@@ -9,12 +9,7 @@ import sys
 import os
 import numpy as np
 
-# Add project to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-
-# Import modules directly to avoid package import issues
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'vent4d_mech', 'core', 'mechanical'))
-import constitutive_models
+from src.core.mechanical import constitutive_models
 
 
 class TestConstitutiveModels:

@@ -13,14 +13,14 @@ import tracemalloc
 from pathlib import Path
 from typing import Dict, Any
 
-# Add project to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add src to path to find the module
+sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-from vent4d_mech.core.base_component import BaseComponent
-from vent4d_mech.core.exceptions import (
+from core.base_component import BaseComponent
+from core.exceptions import (
     ConfigurationError, ValidationError, ComputationError
 )
-from vent4d_mech.core.mechanical.mechanical_modeler import MechanicalModeler
+from core.mechanical.mechanical_modeler import MechanicalModeler
 
 
 class PerformanceBenchmark:
@@ -178,7 +178,7 @@ class PerformanceBenchmark:
         """Benchmark type validation functions."""
         print("Benchmarking type validation...")
 
-        from vent4d_mech.core.types import (
+        from core.types import (
             validate_tensor_array, is_strain_tensor, is_stress_tensor
         )
 

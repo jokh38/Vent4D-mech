@@ -1,0 +1,2 @@
+[console_scripts]
+vent4d-mech = vent4d_mech.cli:main
