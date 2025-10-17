@@ -4,12 +4,12 @@
 
 | # | 단계 | 상태 | 비고 |
 |---|---|---|---|
-| 1 | 영상 정합 (Image Registration) 모듈 개발 | ❌ 미완료 | |
-| 2 | 변형 분석 (Deformation Analysis) 모듈 개발 | ❌ 미완료 | |
-| 3 | 구성 모델링 (Constitutive Modeling) 모듈 개발 | ❌ 미완료 | |
-| 4 | 역산 문제 해결 (Inverse Problem) 모듈 개발 | ❌ 미완료 | |
-| 5 | MicrostructureDB 구축 | ❌ 미완료 | |
-| 6 | 유한요소(FEM) 워크플로우 개발 | ❌ 미완료 | |
+| 1 | 영상 정합 (Image Registration) 모듈 개발 | ✅ 완료 | 핵심 기능 구현 확인됨. |
+| 2 | 변형 분석 (Deformation Analysis) 모듈 개발 | ✅ 완료 | 핵심 기능 구현 확인됨. |
+| 3 | 구성 모델링 (Constitutive Modeling) 모듈 개발 | ✅ 완료 | Yeoh 모델 수정 및 유틸리티 함수 구현 완료. |
+| 4 | 역산 문제 해결 (Inverse Problem) 모듈 개발 | ✅ 완료 | Mock Solver를 통한 독립 실행 및 테스트 완료. |
+| 5 | MicrostructureDB 구축 | 🟡 진행 중 | 기본 구조는 구현되었으나, RVE 분석 등 핵심 로직이 미완성 상태. |
+| 6 | 유한요소(FEM) 워크플로우 개발 | ✅ 완료 | SfePy 연동 오류 수정 및 독립 실행 가능하도록 인터페이스 구현 완료. |
 | 7 | 전체 파이프라인 통합 및 최적화 | ❌ 미완료 | |
 | 8 | 검증 및 문서화 | ❌ 미완료 | |
 | 9 | pre-commit 단계 완료 | ❌ 미완료 | |

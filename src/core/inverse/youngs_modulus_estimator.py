@@ -26,8 +26,13 @@ class YoungsModulusEstimator:
     distributions from observed strain patterns in lung tissue, using regularized
     optimization and physics-based constraints.
 
+    It is designed to be decoupled from the FEM implementation via dependency
+    injection. A FEM solver (either a real one like `FEMSolver` or a
+    `MockFEMSolver` for testing) must be injected during initialization.
+
     Attributes:
         config (dict): Configuration parameters
+        fem_solver (object): The injected FEM solver instance.
         inverse_solver (InverseSolver): Core inverse problem solver
         regularization (RegularizationMethods): Regularization techniques
         utils (OptimizationUtils): Optimization utilities
@@ -35,12 +40,13 @@ class YoungsModulusEstimator:
         material_model (object): Constitutive model for forward problem
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None, fem_solver: Optional[Any] = None):
         """
         Initialize YoungsModulusEstimator instance.
 
         Args:
-            config: Configuration parameters
+            config: Configuration parameters.
+            fem_solver: An FEM solver instance (real or mock) that has a `run_simulation` method.
         """
         self.config = config or self._get_default_config()
 
@@ -48,6 +54,7 @@ class YoungsModulusEstimator:
         self.inverse_solver = InverseSolver(self.config['solver'])
         self.regularization = RegularizationMethods(self.config['regularization'])
         self.utils = OptimizationUtils()
+        self.fem_solver = fem_solver
 
         # Initialize logger
         self.logger = logging.getLogger(__name__)
@@ -59,7 +66,7 @@ class YoungsModulusEstimator:
         self.estimated_modulus = None
         self.optimization_results = None
 
-        self.logger.info("Initialized YoungsModulusEstimator")
+        self.logger.info(f"Initialized YoungsModulusEstimator with solver: {type(fem_solver).__name__}")
 
     def _get_default_config(self) -> Dict[str, Any]:
         """

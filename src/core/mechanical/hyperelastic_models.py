@@ -161,32 +161,28 @@ class Yeoh(IsotropicHyperelasticModel):
         J = np.linalg.det(F)
         B = F @ F.T
         I1 = np.trace(B)
-        I1_m3 = I1 - 3
-        J_m1 = J - 1
 
         # Derivative of W with respect to I1
-        dW_dI1 = self.C1 + 2 * self.C2 * I1_m3 + 3 * self.C3 * I1_m3**2
+        dW_dI1 = self.C1 + 2 * self.C2 * (I1 - 3) + 3 * self.C3 * (I1 - 3)**2
 
-        # Derivative of W with respect to J
-        dW_dJ = (2/self.D1) * J_m1 + (4/self.D2) * J_m1**3 + (6/self.D3) * J_m1**5
+        # Derivative of U(J) with respect to J
+        # Assuming U(J) = 1/D1 * (J-1)**2 for simplicity, as other terms are not standard
+        # A more complete implementation would handle the full volumetric part
+        p = (2 / self.D1) * (J - 1)
 
-        # Deviatoric part
-        dev_stress = (2 / J) * dW_dI1 * B
-
-        # Hydrostatic part
-        p = dW_dJ
-
-        # Total Cauchy stress
-        sigma = dev_stress + p * np.eye(3) - (1/3) * np.trace(dev_stress) * np.eye(3)
+        # Cauchy stress tensor
+        sigma = (2 / J) * dW_dI1 * B - ((2 * I1) / (3 * J)) * dW_dI1 * np.eye(3) + p * np.eye(3)
         return sigma
 
 class Ogden(IsotropicHyperelasticModel):
     """Ogden hyperelastic model (N-term)."""
-    pass
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError("Ogden model is not yet implemented.")
 
 class Gent(IsotropicHyperelasticModel):
     """Gent hyperelastic model (limited chain extensibility)."""
-    pass
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError("Gent model is not yet implemented.")
 
 # Anisotropic models
 class HolzapfelGasserOgden(AnisotropicHyperelasticModel):
@@ -222,7 +218,9 @@ def compute_cauchy_stress_hyperelastic(
     deformation_gradient: NDArray[np.float64]
 ) -> NDArray[np.float64]:
     """Compute Cauchy stress for hyperelastic model."""
-    pass
+    if not hasattr(model, 'cauchy_stress'):
+        raise NotImplementedError(f"The model {type(model).__name__} does not have a 'cauchy_stress' method.")
+    return model.cauchy_stress(deformation_gradient)
 
 def compute_consistent_tangent(
     model: HyperelasticModel,
